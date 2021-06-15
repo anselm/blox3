@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' />
+<script src="/libs/three.min.js" crossorigin="anonymous"></script>
+<script src='/libs/GLTFLoader.js'></script>
+<script src="/libs/Tone.js"></script>
+<script src="/socket.io/socket.io.js"></script></head>
+<body>
+</body>
+</html>
+
+<script type="module">
+
+import {System} from "/system/system.js"
+
+async function tests() {
+
+	/// test construction groups
+	///		+ an application context which later will have permissions
+	///		+ a display surface
+	///		+ a window
+	///		+ some text in that window
+
+	let system = new System()
+
+	let context = await system.insert(
+		{
+			name:"mycontext",
+			type:"/context",
+			mydisplay:{
+				type:"/display",
+				mywindow:{
+					type:"/display/window",
+					position:{x:10,y:10,z:0},
+					size:{x:400,y:400,z:0},
+					mytext:{
+						type:"/display/text",
+						text:"hello",
+						color:"red",
+						position:{x:100,y:100}
+					}
+				}
+			}
+		}
+	)
+
+	// test changes to a node
+
+	context.mydisplay.mywindow.mytext.update({text:"goodbye"})
+
+}
+
+tests()
+
+</script>

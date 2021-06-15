@@ -1,0 +1,6 @@
+/server/service_account.js
+firestore-debug.log
+.firebase
+firebase-debug.log
+.firebaserc
+/node_modules/
