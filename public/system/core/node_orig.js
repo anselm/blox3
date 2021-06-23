@@ -22,14 +22,20 @@ let uuid = nanoid()
 let localid = 0
 let ALLOWNAMED = 1
 
+
+///
+/// Factory for a collection of bases that provide class interfaces
+///		- TODO debate the difference between classes as bases and ordinary json hashes as base?
+///
+
 async function factory(props={}) {
-	let type = props.type
-	let c = type && type.length ? cache[type] : Node;
+	let base = props.base
+	let c = base && base.length ? cache[base] : Node;
 	if(!c) {
-		let m = await import("/system"+type+".js")
+		let m = await import(base+".js")
 		if(m) {
 			for(const [k,v] of Object.entries(m)) {
-				c = cache[type] = v
+				c = cache[base] = v
 				break
 			}
 		}
@@ -46,17 +52,48 @@ export class Node {
 	remove(props) {} // TODO tbd
 	delete(props) {} // TODO tbd
 
+	ontick() {
+		console.log("processing " + this.name + " " + Object.keys(this.children).length )
+		console.log(this.children)
+		// rename this TODO it should just be the event handler in general; like a resolve() or something
+		if(!this.children) {
+			console.log('no kids for ' + this.name)
+		}
+		for(const [k,v] of Object.entries(this.children)) {
+			console.log(k)
+			console.log(v)
+			v.ontick()
+		}
+	}
+
 	///
 	/// create and insert as child from properties
 	/// 	- TODO detect if props is an instance
-	///
+	///		- TODO do not reload if built already; especially if protobase
 
 	async insert(props={}) {
+
 		if(!this.children) this.children={}
+
+		// this is basically create - may want to move there...
+
+		// todo maybe separate out create from insert from update ... be more picky about what is permitted?
+		// then it is easier to fold together the constructors
+
+		if(props.base && props.base.startsWith("/system/") == false) {
+			// - todo arguably base and base could be the same; and detect if a class or an instance
+			// - todo don't do this if this entity already exists and is just being updated; avoid hitting disk
+			props = await import(props.base + ".js")
+			props = props.thing
+		}
+
+		// may have to grant a name?
 		localid++
 		props.uuid = (""+localid).padStart(8,'0') + uuid
-		if(!props.name) props.name = props.type+localid
+		if(!props.name) props.name = props.base+localid
 		props.path = this.path + "/" + props.name
+
+		// exists?
 		let child = this.children[props.name]
 		if(!child) {
 			props.parent = this
@@ -64,7 +101,7 @@ export class Node {
 			if(!child) return 0
 			child.name = props.name
 			child.path = props.path
-			child.type = props.type
+			child.base = props.base
 			child.parent = this
 			this.children[props.name]=child
 			if(ALLOWNAMED)this[props.name]=child
@@ -84,6 +121,7 @@ export class Node {
 
 		// as a feature, allow the caller to supply an array of children to insert
 		if(props instanceof Array) {
+			// TODO error not async
 			props.forEach( this.insert )
 			return
 		}
@@ -91,17 +129,18 @@ export class Node {
 		// set both trivial properties and also pull out children crumpled into the hash
 		for(const [k,v] of Object.entries(props)) {
 
-			let isAbstract = v.prototype && v.prototype.constructor ? true : false
+			let isAbstract = v.protobase && v.protobase.constructor ? true : false
 			let isArray = v instanceof Array
 			let isObject = v instanceof Object
 			let isNode = v instanceof Node
 
 			if(isArray && k=="children") {
+				// TODO error not async
 				// the array property 'children' is reserved for children entities; deal with this in a special way
 				v.forEach( this.insert )
 			}
 
-			else if(isNode || isAbstract || isArray || !isObject || !v.type || !v.type.length) {
+			else if(isNode || isAbstract || isArray || !isObject || !v.base || !v.base.length) {
 				// update a simple field
 				this[k]=v
 			}
@@ -122,7 +161,7 @@ export class Node {
 
 		// TODO later support changing the path?
 
-		// TODO if this was a prototype then change all the dependents; may need special prototype support
+		// TODO if this was a protobase then change all the dependents; may need special protobase support
 
 		// TODO support delete
 

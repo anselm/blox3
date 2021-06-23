@@ -7,50 +7,59 @@
 <script src="/libs/Tone.js"></script>
 <script src="/socket.io/socket.io.js"></script></head>
 <body>
+
+
 </body>
 </html>
 
 <script type="module">
 
-import {System} from "/system/system.js"
+import {Node} from "/system/core/node.js"
 
-async function tests() {
+async function bootstrap() {
 
-	/// test construction groups
-	///		+ an application context which later will have permissions
-	///		+ a display surface
-	///		+ a window
-	///		+ some text in that window
+	// ----------------------------------------------------------------------------------------------
+	// set up critical core pieces
 
-	let system = new System()
+	let root = Node.root()
 
-	let context = await system.insert(
-		{
-			name:"mycontext",
-			type:"/context",
-			mydisplay:{
-				type:"/display",
-				mywindow:{
-					type:"/display/window",
-					position:{x:10,y:10,z:0},
-					size:{x:400,y:400,z:0},
-					mytext:{
-						type:"/display/text",
-						text:"hello",
-						color:"red",
-						position:{x:100,y:100}
-					}
-				}
-			}
-		}
-	)
+	// a 2d display shared between different apps
+	root.insert({base:"/system/display/display",name:"display"})
 
-	// test changes to a node
+	// a 3d view shared between different apps
+	root.insert({base:"/system/3d/render",name:"3d"})
 
-	context.mydisplay.mywindow.mytext.update({text:"goodbye"})
+// TODO - these canvases should be the same size and overlaid
+// TODO - exercise 3d a bit more
+
+	// ----------------------------------------------------------------------------------------------
+	// Add a desktop user interface app that talks to the main display surface
+
+	let desktop = await root.insert({base:"/system/core/app"})
+	await desktop.insert({base:"/userland/desktop1"})
+
+// TODO write input systems and a manual input bar
+
+	// ----------------------------------------------------------------------------------------------
+	// Add an example user app on the same display surface <- later this can be produced by desktop
+
+// TODO have a desktop that lets a user load this rather than having it show up by itself
+// Try reduce priv levels of children
+
+	let app = await root.insert({base:"/system/core/app"})
+	await app.insert({base:"/userland/test1"})
+
+
+	// ----------------------------------------------------------------------------------------------
+
+	// test all
+
+	root.ontick()
 
 }
 
-tests()
+bootstrap()
 
 </script>
+
+
